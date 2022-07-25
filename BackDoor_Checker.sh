@@ -53,7 +53,7 @@ echo -e "\033[34m [+] 空口令用户检查完毕.\033[0m"
 }
 
 check_SUID_shell(){
-echo -e "\033[34m [+] 正在检查SUID权限程序....\033[0m"
+echo -e "\033[34m [+] 正在检查SUID权限程序....(用时可能较长=.=)\033[0m"
 if [ -z "$(find / -perm -u=s -type f 2>/dev/null)" ] ;then
   echo "\033[32m [*] 不存在SUID权限程序.\033[0m"
 else
@@ -268,10 +268,41 @@ elif [[ -n "$(netstat -antpl | grep ESTABLISHED |grep - | grep -v [0-9]/)" ]]; t
 	fi
 	
 else
-  echo -e "\033[32m [*] 系统不存在可疑的vim进程外连.\033[0m"
+  echo -e "\033[32m [*] 系统不存在可疑的vim进程外连.\033[0m"	
 fi
 echo -e "\033[34m [+] vim后门检查完毕.\033[0m"		
 }
+
+check_file_integrity(){
+echo -e "\033[34m [+] 正在检查是否存在其他未知后门文件....\033[0m"
+
+echo -e "\033[34m [+] 正在检查不属于的二进制文件....\033[0m"
+	if [ -n "$(find /proc/*/exe 2>/dev/null -exec readlink {} + | xargs rpm -qf | grep "not owned")" ];then
+		echo -e "\033[31m [*] 系统可疑的不属于二进制文件如下：\033[0m"
+		find /proc/*/exe 2>/dev/null -exec readlink {} + | xargs rpm -qf | grep "not owned"
+	else
+		echo -e "\033[32m [*] 未发现可疑不属于的二进制文件.\033[0m"
+	fi
+echo -e "\033[34m [+] 正在校验运行的二进制文件是否与包中的文件匹配....\033[0m"
+	if [ -n "$(find /proc/*/exe 2>/dev/null -exec readlink {} + | xargs rpm -qf | xargs rpm -V)" ];then
+		echo -e "\033[31m [*] 系统可疑的运行的二进制文件如下：\033[0m"
+		find /proc/*/exe 2>/dev/null -exec readlink {} + | xargs rpm -qf | xargs rpm -V
+	else
+		echo -e "\033[32m [*] 未发现可疑的运行的二进制文件.\033[0m"
+	fi
+
+echo -e "\033[34m [+] 正在校验所有包文件完整性....(用时可能较长=.=)\033[0m"
+	if [ -n "$(rpm -Va)" ];then
+		echo -e "\033[31m [*] 系统可疑的改动过的二进制文件如下：\033[0m"
+		rpm -Va
+	else
+		echo -e "\033[32m [*] 未发现可疑的改动过的二进制文件.\033[0m"
+	fi
+
+
+echo -e "\033[34m [+] 其他未知后门文件检查完毕.\033[0m"		
+}
+
 
 check_super_user
 check_nopass_user
@@ -284,3 +315,4 @@ check_sudoers_root
 check_inetd_service
 check_strace_alias
 check_vim_python
+check_file_integrity
